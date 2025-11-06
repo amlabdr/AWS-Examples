@@ -1,8 +1,9 @@
-# ✅ Gitpod configuration file
 image: gitpod/workspace-full
 
 tasks:
   - name: Install AWS CLI v2
+    env:
+      AWS_CLI_AUTO_PROMPT=on-partial
     init: |
       # --- Dynamically detect repo + workspace paths ---
       GITPOD_REPO_ROOT=${GITPOD_REPO_ROOT:-$PWD}
