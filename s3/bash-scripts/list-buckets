@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Listing all S3 buckets for your AWS account..."
+
+aws s3api list-buckets \
+  --query "Buckets[].Name" \
+  --output table

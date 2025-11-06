@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Usage: ./delete-all-files.sh <bucket-name> <region>
+if [ -z "${1:-}" ] || [ -z "${2:-}" ]; then
+  echo "Usage: $0 <bucket-name> <region>"
+  exit 1
+fi
+
+BUCKET="$1"
+REGION="$2"
+
+echo "Listing objects in bucket: $BUCKET..."
+
+OBJECTS_JSON=$(aws s3api list-objects-v2 --bucket "$BUCKET" --region "$REGION" --query 'Contents[].Key' --output json)
+
+if [ "$OBJECTS_JSON" == "null" ] || [ "$OBJECTS_JSON" == "[]" ]; then
+  echo "Bucket is already empty."
+  exit 0
+fi
+
+echo "Deleting all objects from bucket: $BUCKET..."
+
+aws s3api delete-objects \
+  --bucket "$BUCKET" \
+  --region "$REGION" \
+  --delete "$(aws s3api list-objects-v2 --bucket "$BUCKET" --region "$REGION" --query '{Objects: Contents[].{Key: Key}}')"
+
+echo "All objects deleted from bucket: $BUCKET"

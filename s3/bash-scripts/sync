@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Usage: ./sync-random-files.sh <bucket-name> <region>
+if [ -z "${1:-}" ] || [ -z "${2:-}" ]; then
+  echo "Usage: $0 <bucket-name> <region>"
+  exit 1
+fi
+
+BUCKET="$1"
+REGION="$2"
+TMP_DIR=$(mktemp -d)
+
+echo "Creating 10 random files in temporary directory: $TMP_DIR"
+
+# Generate 10 random files with small random content
+for i in {1..10}; do
+  FILE="$TMP_DIR/random_$i.txt"
+  echo "Random file number $i" > "$FILE"
+  head -c $((RANDOM % 300 + 100)) /dev/urandom | base64 >> "$FILE"
+  echo "Created $FILE"
+done
+
+echo "☁️ Uploading 10 files to s3://$BUCKET using aws s3api..."
+
+for FILE in "$TMP_DIR"/*; do
+  BASENAME=$(basename "$FILE")
+  echo "➡️  Uploading $BASENAME ..."
+  aws s3api put-object \
+    --bucket "$BUCKET" \
+    --key "$BASENAME" \
+    --body "$FILE" \
+    --region "$REGION" \
+    > /dev/null
+done
+
+echo "Cleaning up local temp directory..."
+rm -rf "$TMP_DIR"
+
+echo "Done! 10 files uploaded to s3://$BUCKET/"
