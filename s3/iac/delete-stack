@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Usage: ./delete-stack.sh <stack-name> <region>
+if [ -z "${1:-}" ] || [ -z "${2:-}" ]; then
+  echo "Usage: $0 <stack-name> <region>"
+  exit 1
+fi
+
+STACK_NAME="$1"
+REGION="$2"
+
+echo "Checking if stack '$STACK_NAME' exists in region '$REGION'..."
+
+if ! aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region "$REGION" >/dev/null 2>&1; then
+  echo "Stack '$STACK_NAME' does not exist or cannot be found."
+  exit 0
+fi
+
+echo "Deleting stack '$STACK_NAME'..."
+aws cloudformation delete-stack --stack-name "$STACK_NAME" --region "$REGION"
+
+echo "Waiting for stack deletion to complete..."
+aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME" --region "$REGION"
+
+echo "Stack '$STACK_NAME' deleted successfully."

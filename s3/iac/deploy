@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Usage: deploy <stack-name> <template-file> <region>
+if [ -z "${1:-}" ] || [ -z "${2:-}" ] || [ -z "${3:-}" ]; then
+  echo "Usage: $0 <stack-name> <template-file> <region>"
+  exit 1
+fi
+
+STACK_NAME="$1"
+TEMPLATE_FILE="$2"
+REGION="$3"
+
+echo "Validating CloudFormation template: $TEMPLATE_FILE ..."
+aws cloudformation validate-template --template-body "file://$TEMPLATE_FILE"
+
+# Check if the stack already exists
+echo "Checking if stack '$STACK_NAME' exists..."
+if aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region "$REGION" >/dev/null 2>&1; then
+  echo "Stack exists. Updating..."
+  aws cloudformation update-stack \
+    --stack-name "$STACK_NAME" \
+    --template-body "file://$TEMPLATE_FILE" \
+    --region "$REGION" \
+    --capabilities CAPABILITY_NAMED_IAM || {
+      echo "No updates to be performed."
+    }
+  echo "Waiting for stack update to complete..."
+  aws cloudformation wait stack-update-complete --stack-name "$STACK_NAME" --region "$REGION"
+else
+  echo "Stack does not exist. Creating..."
+  aws cloudformation create-stack \
+    --stack-name "$STACK_NAME" \
+    --template-body "file://$TEMPLATE_FILE" \
+    --region "$REGION" \
+    --capabilities CAPABILITY_NAMED_IAM
+  echo "Waiting for stack creation to complete..."
+  aws cloudformation wait stack-create-complete --stack-name "$STACK_NAME" --region "$REGION"
+fi
+
+echo "Stack '$STACK_NAME' deployed successfully in region '$REGION'."
